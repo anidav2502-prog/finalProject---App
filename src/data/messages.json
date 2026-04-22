@@ -1,0 +1,10 @@
+[
+  {
+    "id": "1",
+    "text": "Hello",
+    "sender": "user1",
+    "receiver": "user2",
+    "timestamp": 1710000000,
+    "status": "seen"
+  }
+]
