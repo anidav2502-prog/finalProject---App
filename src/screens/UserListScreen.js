@@ -1,42 +1,87 @@
-import React from "react";
-import { View, Text, FlatList, TouchableOpacity, Image } from "react-native";
-import { users } from "../data/users";
+import React, { useEffect, useState } from "react";
+import { View, FlatList, Text, TouchableOpacity, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const UserListScreen = ({ navigation }) => {
-  const currentUser = "user1";
+const USERS_KEY = "users_db";
+const CURRENT_USER_KEY = "current_user";
+import UserDetails from "../components/UserDetails";
 
-  const otherUsers = users.filter((u) => u.id !== currentUser);
+export default function UserListScreen({ navigation }) {
+  const [users, setUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const load = async () => {
+    const usersData = await AsyncStorage.getItem(USERS_KEY);
+    const current = await AsyncStorage.getItem(CURRENT_USER_KEY);
+
+    if (usersData) setUsers(JSON.parse(usersData));
+    if (current) setCurrentUser(JSON.parse(current));
+  };
+
+  const logout = async () => {
+    await AsyncStorage.removeItem(CURRENT_USER_KEY);
+    navigation.replace("Login");
+  };
 
   return (
-    <FlatList
-      data={otherUsers}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          onPress={() =>
-            navigation.navigate("Chats", {
-              otherUser: item.id,
-              username: item.username,
-            })
-          }
-          style={{
-            flexDirection: "row",
-            padding: 15,
-            alignItems: "center",
-            borderBottomWidth: 0.5,
-          }}
-        >
-          <Image
-            source={item.avatar}
-            style={{ width: 45, height: 45, borderRadius: 25 }}
-          />
-          <Text style={{ marginLeft: 12, fontSize: 16 }}>
-            {item.username}
-          </Text>
-        </TouchableOpacity>
-      )}
-    />
-  );
-};
+    <View style={{ flex: 1, padding: 10 }}>
+      <TouchableOpacity style={styles.logout} onPress={logout}>
+        <Text style={styles.text}>Logout</Text>
+      </TouchableOpacity>
+      <Text style={styles.header}>List of chats</Text>
 
-export default UserListScreen;
+      <FlatList
+        data={users.filter(u => u.id !== currentUser?.id)}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+    <TouchableOpacity
+      onPress={() =>
+        navigation.navigate("Chats", {
+          otherUser: item.id,
+          name: item.name
+        })
+      }
+    >
+      <UserDetails
+        name={item.name}
+        desc={`@${item.username}`}
+        image={
+          item.avatar
+            ? item.avatar
+            : require("../../assets/projekatpfp.webp")
+        }
+      />
+    </TouchableOpacity>
+  )}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  logout: {
+    backgroundColor: "#e8a0b1",
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 40,
+    width: 100,
+    alignSelf: "center",
+    marginTop: 10
+  },
+  text: {
+    color: "white",
+    fontWeight: "bold"
+  },
+  header: {
+    textAlign: "center",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginVertical: 10,
+    marginBottom: 40,
+  },
+});
