@@ -1,25 +1,46 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {View,FlatList,TouchableOpacity,StyleSheet,Text} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import UserDetails from "../components/UserDetails";
 
 const USERS_KEY = "users_db";
+const MESSAGES_KEY = "messages_db";
 const CURRENT_USER_KEY = "current_user";
-import UserDetails from "../components/UserDetails";
 
 export default function UserListScreen({ navigation }) {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    load();
+    loadUsers();
   }, []);
 
-  const load = async () => {
-    const usersData = await AsyncStorage.getItem(USERS_KEY);
-    const current = await AsyncStorage.getItem(CURRENT_USER_KEY);
+  const loadUsers = async () => {
+    const userData = await AsyncStorage.getItem(CURRENT_USER_KEY);
+    const data = await AsyncStorage.getItem(USERS_KEY);
 
-    if (usersData) setUsers(JSON.parse(usersData));
-    if (current) setCurrentUser(JSON.parse(current));
+    if (userData) setCurrentUser(JSON.parse(userData));
+    if (data) setUsers(JSON.parse(data));
+  };
+
+  const deleteUser = async (userId) => {
+    const data = await AsyncStorage.getItem(USERS_KEY);
+    let usersData = data ? JSON.parse(data) : [];
+
+    usersData = usersData.filter((u) => u.id !== userId);
+    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(usersData));
+
+    const msgData = await AsyncStorage.getItem(MESSAGES_KEY);
+    let messages = msgData ? JSON.parse(msgData) : [];
+
+    messages = messages.filter(
+      (msg) => msg.sender !== userId && msg.receiver !== userId
+    );
+
+    await AsyncStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+
+    loadUsers();
   };
 
   const logout = async () => {
@@ -27,61 +48,74 @@ export default function UserListScreen({ navigation }) {
     navigation.replace("Login");
   };
 
+  const renderItem = ({ item }) => {
+    if (item.id === currentUser?.id) return null;
+
+    return (
+      <View style={styles.wrapper}>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("Chats", {
+              otherUser: item.id,
+              name: item.name
+            })
+          }
+        >
+          <UserDetails
+            name={item.name}
+            desc={`@${item.username}`}
+            image={
+              item.avatar ||
+              require("../../assets/projekatpfp.webp")
+            }
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => deleteUser(item.id)}
+          style={styles.deleteIcon}
+        >
+          <MaterialCommunityIcons
+            name="trash-can-outline"
+            size={22}
+            color="red"
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
-    <View style={{ flex: 1, padding: 10 }}>
-      <TouchableOpacity style={styles.logout} onPress={logout}>
-        <Text style={styles.text}>Logout</Text>
+    <View style={{ flex: 1, paddingTop: 20 }}>
+      
+      <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+        <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
-      <Text style={styles.header}>List of chats</Text>
 
       <FlatList
-        data={users.filter(u => u.id !== currentUser?.id)}
+        data={users}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-    <TouchableOpacity
-      onPress={() =>
-        navigation.navigate("Chats", {
-          otherUser: item.id,
-          name: item.name
-        })
-      }
-    >
-      <UserDetails
-        name={item.name}
-        desc={`@${item.username}`}
-        image={
-          item.avatar
-            ? item.avatar
-            : require("../../assets/projekatpfp.webp")
-        }
-      />
-    </TouchableOpacity>
-  )}
+        renderItem={renderItem}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  logout: {
-    backgroundColor: "#e8a0b1",
-    padding: 15,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 40,
-    width: 100,
-    alignSelf: "center",
-    marginTop: 10
+  wrapper: {
+    position: "relative"
   },
-  text: {
-    color: "white",
+  deleteIcon: {
+    position: "absolute",
+    right: 35,
+    top: 40
+  },
+  logoutBtn: {
+    padding: 10,
+    alignItems: "center"
+  },
+  logoutText: {
+    color: "black",
     fontWeight: "bold"
-  },
-  header: {
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginVertical: 10,
-    marginBottom: 40,
-  },
+  }
 });

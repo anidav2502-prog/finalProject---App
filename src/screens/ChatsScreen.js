@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity
+import {View,Text,TextInput,Button,FlatList,StyleSheet,TouchableOpacity
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -73,6 +66,21 @@ const ChatsScreen = ({ route }) => {
     });
   };
 
+  const clearChat = async () => {
+  if (!currentUser) return;
+
+  const updatedMessages = messages.filter(
+    (msg) =>
+      !(
+        (msg.sender === currentUser.id && msg.receiver === otherUser) ||
+        (msg.sender === otherUser && msg.receiver === currentUser.id)
+      )
+  );
+
+  setMessages(updatedMessages);
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMessages));
+};
+
   const filteredMessages = messages.filter(
     (msg) =>
       (msg.sender === currentUser?.id && msg.receiver === otherUser) ||
@@ -100,6 +108,11 @@ const ChatsScreen = ({ route }) => {
 
   return (
     <View style={{ flex: 1 }}>
+      <TouchableOpacity onPress={clearChat} style={{ marginBottom: 10 }}>
+  <Text style={{ color: "red", textAlign: "center", margin:20 }}>
+    Delete Chat
+  </Text>
+      </TouchableOpacity>
       <Text style={styles.header}>{name}</Text>
 
       <FlatList
